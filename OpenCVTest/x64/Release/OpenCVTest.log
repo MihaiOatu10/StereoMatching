@@ -1,0 +1,12 @@
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(538,5): warning MSB8028: The intermediate directory (x64\Release\) contains files shared from another project (OpenCVTest.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  GeneticAlgorithm.cpp
+C:\Users\themi\Documents\Facultate\OpenCV\OpenCVTest\OpenCVTest\GeneticAlgorithm.cpp(108,42): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\themi\Documents\Facultate\OpenCV\OpenCVTest\OpenCVTest\GeneticAlgorithm.cpp(109,14): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\themi\Documents\Facultate\OpenCV\OpenCVTest\OpenCVTest\GeneticAlgorithm.cpp(241,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\themi\Documents\Facultate\OpenCV\OpenCVTest\OpenCVTest\GeneticAlgorithm.cpp(299,12): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  Generating code
+  7 of 392 functions ( 1.8%) were compiled, the rest were copied from previous compilation.
+    3 functions were new in current compilation
+    4 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  OpenCVTest.vcxproj -> C:\Users\themi\Documents\Facultate\OpenCV\OpenCVTest\x64\Release\StereoMatching_GA_Quadtree.exe
