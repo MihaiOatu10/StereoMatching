@@ -71,6 +71,8 @@ LinearQuadtree GeneticAlgorithm::graftCrossover(const LinearQuadtree& p1, const 
 
 	child.simplify(0, 0, 0);
 
+	child.makeDirty();
+
 	return child;
 }
 
@@ -116,11 +118,6 @@ void GeneticAlgorithm::mutateAlteration(LinearQuadtree& qt, NodeLocation k, Ster
 {
 	int originalDisp = qt.getGene(k.k);
 	if (originalDisp == -1) return;
-
-	//if ((rand() % 100) < 10) {
-	//	qt.setGene(k.k, rand() % Config::MAX_DISPARITY);
-	//	return;
-	//}
 
 	float oldEnergy = matcher.calculateFitness(qt);
 
@@ -225,18 +222,19 @@ void GeneticAlgorithm::mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoM
 }
 
 void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
-	// Calculăm fitness-ul inițial pentru prima generație
-	for (int i = 0; i < popSize; i++) {
-		matcher.calculateFitness(population[i]);
-	}
 
+	for (int i = 0; i < popSize; i++) {
+		if (population[i].isDirty()) {
+			matcher.calculateFitness(population[i]);
+			population[i].cleanDirt();
+		}
+	}
 	for (int gen = 0; gen < Config::GENERATIONS; gen++) {
 		float minEnergy = FLT_MAX;
 		float maxEnergy = -FLT_MAX;
 		float totalEnergy = 0;
 		int bestIdx = 0;
 
-		// Găsim cel mai bun individ (Elite) și statistici
 		for (int i = 0; i < popSize; i++) {
 			float f = population[i].getFitness();
 			totalEnergy += f;
@@ -252,50 +250,54 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 		float avgEnergy = totalEnergy / popSize;
 		std::cout << "Generation " << gen << " | Best: " << minEnergy << " | Avg: " << avgEnergy << std::endl << std::flush;
 
-		// Criteriu de oprire (Convergență)
 		if ((maxEnergy - minEnergy) < Config::CONVERGENCE_THRESHOLD * avgEnergy) {
 			break;
 		}
 
-		// Salvăm Elita conform Goldberg (1989)
 		LinearQuadtree elite = population[bestIdx];
 		std::vector<LinearQuadtree> nextGen;
 
-		// Creăm noua generație
+		std::vector<int> sortedIndices(popSize);
+		for (int i = 0; i < popSize; i++) sortedIndices[i] = i;
+
+		std::sort(sortedIndices.begin(), sortedIndices.end(), [&](int a, int b) {
+			return population[a].getFitness() < population[b].getFitness();
+			});
+
+		int totalRankWeight = (popSize * (popSize + 1)) / 2;
+		std::vector<int> cumulativeRankProb(popSize);
+		int currentSum = 0;
+
+		for (int r = 0; r < popSize; r++) {
+			int weight = popSize - r;
+			currentSum += weight;
+			cumulativeRankProb[r] = currentSum;
+		}
+
+		auto selectParentRank = [&]() {
+			int rnd = rand() % totalRankWeight;
+			for (int r = 0; r < popSize; r++) {
+				if (rnd < cumulativeRankProb[r]) return sortedIndices[r];
+			}
+			return sortedIndices[popSize - 1];
+			};
+
 		while (nextGen.size() < (size_t)popSize) {
+			int p1 = selectParentRank();
+			int p2 = selectParentRank();
 
-			// --- ÎNCEPUT SELECȚIE PRIN TURNEU ---
-			auto selectParent = [&](int tSize) {
-				int bestParent = rand() % popSize;
-				for (int i = 1; i < tSize; i++) {
-					int candidate = rand() % popSize;
-					if (population[candidate].getFitness() < population[bestParent].getFitness()) {
-						bestParent = candidate;
-					}
-				}
-				return bestParent;
-				};
-
-			int p1 = selectParent(3); // Turneu de 3 indivizi
-			int p2 = selectParent(3);
-			// --- SFÂRȘIT SELECȚIE PRIN TURNEU ---
-
-			// Crossover și Mutație conform articolului (Graft Crossover)
 			LinearQuadtree child = graftCrossover(population[p1], population[p2]);
 			mutate(child, matcher);
 
-			// Recalculăm fitness-ul pentru noul individ
 			matcher.calculateFitness(child);
 			nextGen.push_back(child);
 		}
 
-		// --- STRATEGIA ELITISTĂ (GOLDBERG) ---
-		// Verificăm dacă elita din generația anterioară mai există
 		float newMinEnergy = FLT_MAX;
 		int worstNextIdx = 0;
 		float newMaxEnergy = -FLT_MAX;
 
-		for (int i = 0; i < popSize; i++) {
+		for (int i = 0; i < (int)nextGen.size(); i++) {
 			float f = nextGen[i].getFitness();
 			if (f < newMinEnergy) newMinEnergy = f;
 			if (f > newMaxEnergy) {
@@ -304,7 +306,6 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 			}
 		}
 
-		// Dacă nicio soluție nouă nu e mai bună ca vechea elită, o forțăm înapoi
 		if (minEnergy < newMinEnergy) {
 			nextGen[worstNextIdx] = elite;
 		}

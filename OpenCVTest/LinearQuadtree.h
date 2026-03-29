@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <opencv2/core/types.hpp>
 #include <opencv2/opencv.hpp>
@@ -12,6 +13,7 @@ private:
 	int base_size;
 	std::vector<int> D;
 	double fitness;
+	bool m_isDirty = true;
 
 public:
 	LinearQuadtree(int maxDepth, int baseSize)
@@ -26,11 +28,14 @@ public:
 	int getBaseSize() const { return base_size; }
 	double getFitness() const { return fitness; }
 	int getGene(int k) const { return D[k]; }
-	void setGene(int k, int value) { D[k] = value; }
+	void setGene(int k, int value);
 	void setFitness(double value) { fitness = value; }
 	void buildRandom(int depth, int x, int y, StereoMatcher& matcher);
 	void simplify(int depth, int x, int y);
 	void drawOutline(cv::Mat& canvas, int depth, int x, int y) const;
 	void drawDisparity(cv::Mat& canvas, int depth, int x, int y) const;
 	NodeLocation findLeafAt(int px, int py) const;
+	bool isDirty() const { return m_isDirty; }
+	void makeDirty() { m_isDirty = true; }
+	void cleanDirt() { m_isDirty = false; }
 };

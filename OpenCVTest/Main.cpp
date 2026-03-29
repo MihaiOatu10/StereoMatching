@@ -9,8 +9,8 @@
 int main() {
     srand((unsigned int)time(NULL));
 
-    cv::Mat imgL = cv::imread("view5.png", cv::IMREAD_GRAYSCALE);
-    cv::Mat imgR = cv::imread("view1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat imgL = cv::imread("scene1.row3.col1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat imgR = cv::imread("scene1.row3.col3.png", cv::IMREAD_GRAYSCALE);
 
     if (imgL.empty() || imgR.empty()) {
         return -1;

@@ -18,7 +18,15 @@ cv::Rect LinearQuadtree::getRect(int depth, int x, int y) const
 	return target & bounds;
 }
 
-void LinearQuadtree::buildRandom(int depth, int x, int y, StereoMatcher& matcher)	
+void LinearQuadtree::setGene(int k, int value)
+{
+	if (D[k] != value) {
+		D[k] = value;
+		m_isDirty = true;
+	}
+}
+
+void LinearQuadtree::buildRandom(int depth, int x, int y, StereoMatcher& matcher)
 {
 	int k = getIndex(depth, x, y);
 
@@ -50,7 +58,7 @@ void LinearQuadtree::buildRandom(int depth, int x, int y, StereoMatcher& matcher
 	}
 
 	if (depth == 0) {
-		//simplify(0, 0, 0);
+		simplify(0, 0, 0);
 	}
 }
 

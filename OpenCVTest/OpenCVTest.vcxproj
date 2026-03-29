@@ -126,6 +126,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\VCPKG\vcpkg\installed\x64-windows\include\opencv4</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
+      <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,6 +147,9 @@
     <ClInclude Include="GeneticAlgorithm.h" />
     <ClInclude Include="LinearQuadtree.h" />
     <ClInclude Include="StereoMatcher.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="StereoMatcher.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
