@@ -6,3 +6,4 @@
 .vs/
 **/Release/
 **/Debug/
+**/vcpkg_installed/

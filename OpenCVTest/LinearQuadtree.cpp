@@ -140,9 +140,10 @@ NodeLocation LinearQuadtree::findLeafAt(int px, int py) const
 		int k = getIndex(curDepth, curX, curY);
 		if (D[k] != -1) return { k, curDepth, curX, curY };
 
-		int side = base_size / (1 << curDepth);
-		int midX = curX * side + side / 2;
-		int midY = curY * side + side / 2;
+		int nodeW = Config::WIDTH / (1 << curDepth);
+		int nodeH = Config::HEIGHT / (1 << curDepth);
+		int midX = curX * nodeW + nodeW / 2;
+		int midY = curY * nodeH + nodeH / 2;
 
 		curX = curX * 2 + (px >= midX ? 1 : 0);
 		curY = curY * 2 + (py >= midY ? 1 : 0);

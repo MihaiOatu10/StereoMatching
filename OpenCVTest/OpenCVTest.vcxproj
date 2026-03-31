@@ -76,6 +76,9 @@
     <VcpkgHostTriplet>x64-windows</VcpkgHostTriplet>
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -125,18 +128,19 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VCPKG\vcpkg\installed\x64-windows\include\opencv4</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\vcpkg_installed\x64-windows\x64-windows\include\opencv4</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
       <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies); opencv_calib3d4.lib;opencv_core4.lib;opencv_dnn4.lib;opencv_features2d4.lib;opencv_flann4.lib;opencv_highgui4.lib;opencv_imgcodecs4.lib;opencv_imgproc4.lib;opencv_ml4.lib;opencv_objdetect4.lib;opencv_photo4.lib;opencv_stitching4.lib;opencv_video4.lib;opencv_videoio4.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\VCPKG\vcpkg\installed\x64-windows\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);opencv_core4.lib;opencv_highgui4.lib;opencv_imgproc4.lib;opencv_imgcodecs4.lib;opencv_videoio4.lib;opencv_features2d4.lib;opencv_flann4.lib;opencv_ml4.lib;opencv_photo4.lib;opencv_video4.lib;zlib.lib;libpng16.lib;jpeg.lib;tiff.lib; </AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)vcpkg_installed\x64-windows\x64-windows\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Evaluation.cpp" />
     <ClCompile Include="GeneticAlgorithm.cpp" />
     <ClCompile Include="LinearQuadtree.cpp" />
     <ClCompile Include="Main.cpp" />

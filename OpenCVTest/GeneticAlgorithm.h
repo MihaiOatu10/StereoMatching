@@ -25,9 +25,9 @@ public:
 	void mutate(LinearQuadtree& qt, StereoMatcher& matcher);
 	void evolve(StereoMatcher& matcher);
 	LinearQuadtree getBestIndividual() const;
-	void mutateAlteration(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher);
-	void mutateSplitting(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher);
-	void mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher);
+	void mutateAlteration(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy);
+	void mutateSplitting(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy);
+	void mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy);
 };
 
 #endif

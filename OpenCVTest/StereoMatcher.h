@@ -1,5 +1,5 @@
 #pragma once
-#include<opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <vector>
 #include "Common.h"
 #include "LinearQuadtree.h"
@@ -12,11 +12,9 @@ private:
 	int d_max;
 	std::vector<cv::Mat> costVolume;
 	std::vector<cv::Mat> integralCosts;
-	std::vector<float> edgeLengths;
-	std::array<float, 20> penaltyTableVert;
-	std::array<float, 20> penaltyTableHoriz;
-	const float lambda = Config::SMOOTHNESS_LAMBDA;
-
+	std::vector<long long> edgeLengths;
+	std::array<long long, 20> penaltyTableVert;
+	std::array<long long, 20> penaltyTableHoriz;
 public:
 	struct Individual {
 		std::vector<int> genes;
@@ -29,11 +27,19 @@ public:
 
 	float calculateFitness(LinearQuadtree& qt);
 
-	float calculateBorderPenalty(LinearQuadtree& qt, int d1, int x1, int y1, int d2, int x2, int y2, int direction);
+	long long scanBoundary(LinearQuadtree& qt, int start, int end, int fixed, bool horizontal, bool isStart);
 
-	float computeSmoothnessTerm(LinearQuadtree& qt, int depth, int x, int y);
+	float calculateFitness(LinearQuadtree& qt, NodeLocation k);
 
-	float computeDataTerm(LinearQuadtree& qt, int x, int y, int depth);
+	long long computeInternalSmoothness(LinearQuadtree& qt, int depth, int x, int y);
+
+	long long calculateBorderPenalty(LinearQuadtree& qt, int d1, int x1, int y1, int d2, int x2, int y2, int direction);
+
+	long long computeSmoothnessTerm(LinearQuadtree& qt, int depth, int x, int y);
+
+	long long computeDataTerm(LinearQuadtree& qt, int x, int y, int depth, int px, int py, int width, int height);
+
+	int getBestLocalDisparity(int depth, int x, int y);
 	
 	std::vector<cv::Mat>& getCostVolume() { return costVolume; }
 };

@@ -2,6 +2,7 @@
 #include "LinearQuadtree.h"
 #include "StereoMatcher.h"
 #include "Common.h"
+#include <chrono>
 
 void GeneticAlgorithm::copySubTree(const LinearQuadtree& source, LinearQuadtree& dest, int depth, int x, int y)
 {
@@ -39,8 +40,8 @@ void GeneticAlgorithm::findSeedNodes(const LinearQuadtree& p1, const LinearQuadt
 	bool isLeaf1 = (gene1 != -1);
 	bool isLeaf2 = (gene2 != -1);
 
-	if (isLeaf1 != isLeaf2) {
-		seeds.push_back({ d, x, y });
+	if (isLeaf1 && isLeaf2) {
+		if (gene1 != gene2) seeds.push_back({ d, x, y });
 		return;
 	}
 
@@ -76,31 +77,6 @@ LinearQuadtree GeneticAlgorithm::graftCrossover(const LinearQuadtree& p1, const 
 	return child;
 }
 
-void GeneticAlgorithm::mutate(LinearQuadtree& qt, StereoMatcher& matcher)
-{
-	int width = Config::WIDTH;
-	int height = Config::HEIGHT;
-	int numpixels = width + height;
-	for (int i = 0; i < numpixels; i++) {
-		int rx = rand() % width;
-		int ry = rand() % height;
-		NodeLocation k = qt.findLeafAt(rx, ry);
-		int choice = rand() % 3;
-		if (choice == 0)
-		{
-			mutateAlteration(qt, k, matcher);
-		}
-		else if (choice == 1)
-		{
-			mutateSplitting(qt, k, matcher);
-		}
-		else {
-			mutateMerging(qt, k, matcher);
-		}
-	}
-	qt.simplify(0, 0, 0);
-}
-
 LinearQuadtree GeneticAlgorithm::getBestIndividual() const
 {
 	float bestFitness = FLT_MAX;
@@ -114,71 +90,121 @@ LinearQuadtree GeneticAlgorithm::getBestIndividual() const
 	return population[bestIdx];
 }
 
-void GeneticAlgorithm::mutateAlteration(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher)
+void GeneticAlgorithm::mutate(LinearQuadtree& qt, StereoMatcher& matcher)
+{
+	int width = Config::WIDTH;
+	int height = Config::HEIGHT;
+	int numpixels = width + height;
+	float currentEnergy = matcher.calculateFitness(qt);
+
+	for (int i = 0; i < numpixels; i++) {
+		int rx = rand() % width;
+		int ry = rand() % height;
+		NodeLocation k = qt.findLeafAt(rx, ry);
+		int choice = rand() % 3;
+		if (choice == 0)
+		{
+			mutateAlteration(qt, k, matcher, currentEnergy);
+		}
+		else if (choice == 1)
+		{
+			mutateSplitting(qt, k, matcher, currentEnergy);
+		}
+		else {
+			mutateMerging(qt, k, matcher, currentEnergy);
+		}
+	}
+	qt.simplify(0, 0, 0);
+}
+
+void GeneticAlgorithm::mutateAlteration(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy)
 {
 	int originalDisp = qt.getGene(k.k);
 	if (originalDisp == -1) return;
 
-	float oldEnergy = matcher.calculateFitness(qt);
+	float localEnergyBefore = matcher.calculateFitness(qt, k);
 
+	std::set<int> neighborLabels;
 	int nodeW = Config::WIDTH / (1 << k.depth);
 	int nodeH = Config::HEIGHT / (1 << k.depth);
-
 	int px = k.x * nodeW;
 	int py = k.y * nodeH;
 
-	int nx = px + nodeW + 1;
-	int ny = py + (nodeH / 2);
+	std::vector<cv::Point> checkPoints = {
+		{px + nodeW / 2, py - 1},           // Up
+		{px + nodeW / 2, py + nodeH + 1},   // Down
+		{px - 1, py + nodeH / 2},           // Left
+		{px + nodeW + 1, py + nodeH / 2}    // Right
+	};
 
-	if (nx >= Config::WIDTH) {
-		nx = px - 1;
+	for (auto& pt : checkPoints) {
+		if (pt.x >= 0 && pt.x < Config::WIDTH && pt.y >= 0 && pt.y < Config::HEIGHT) {
+			NodeLocation neighbor = qt.findLeafAt(pt.x, pt.y);
+			int nDisp = qt.getGene(neighbor.k);
+			if (nDisp != -1 && nDisp != originalDisp) {
+				neighborLabels.insert(nDisp);
+			}
+		}
 	}
 
-	if (nx < 0 || ny < 0 || ny >= Config::HEIGHT) return;
+	if (neighborLabels.empty()) return;
 
-	NodeLocation neighbor = qt.findLeafAt(nx, ny);
-	int neighborDisp = qt.getGene(neighbor.k);
+	int bestDisp = originalDisp;
+	float bestLocalEnergy = localEnergyBefore;
 
-	if (neighborDisp != -1 && neighborDisp != originalDisp) {
-		qt.setGene(k.k, neighborDisp);
+	for (int label : neighborLabels) {
+		qt.setGene(k.k, label);
+		float currentLocalEnergy = matcher.calculateFitness(qt, k);
 
-		if (matcher.calculateFitness(qt) >= oldEnergy) {
-			qt.setGene(k.k, originalDisp);
+		if (currentLocalEnergy < bestLocalEnergy) {
+			bestLocalEnergy = currentLocalEnergy;
+			bestDisp = label;
 		}
+	}
+
+	if (bestDisp != originalDisp) {
+		qt.setGene(k.k, bestDisp);
+		oldEnergy = oldEnergy - localEnergyBefore + bestLocalEnergy;
+	}
+	else {
+		qt.setGene(k.k, originalDisp);
 	}
 }
 
-void GeneticAlgorithm::mutateSplitting(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher)
+void GeneticAlgorithm::mutateSplitting(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy)
 {
 	if (k.depth >= qt.getMaxDepth()) return;
 
 	int originalDisp = qt.getGene(k.k);
 	if (originalDisp == -1) return;
 
-	float oldEnergy = matcher.calculateFitness(qt);
+	float localEnergyBefore = matcher.calculateFitness(qt, k);
 
 	qt.setGene(k.k, -1);
-
+	std::vector<int> childIndices;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 2; j++) {
 			int childK = qt.getIndex(k.depth + 1, k.x * 2 + i, k.y * 2 + j);
-			qt.setGene(childK, originalDisp);
+			int bestD = matcher.getBestLocalDisparity(k.depth + 1, k.x * 2 + i, k.y * 2 + j);
+			qt.setGene(childK, bestD);
+			childIndices.push_back(childK);
 		}
 	}
 
-	if (matcher.calculateFitness(qt) >= oldEnergy) {
-		qt.setGene(k.k, originalDisp);
+	float localEnergyAfter = matcher.calculateFitness(qt, k);
 
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 2; j++) {
-				int childK = qt.getIndex(k.depth + 1, k.x * 2 + i, k.y * 2 + j);
-				qt.setGene(childK, -1);
-			}
+	if (localEnergyAfter >= localEnergyBefore) {
+		qt.setGene(k.k, originalDisp);
+		for (int childK : childIndices) {
+			qt.setGene(childK, -1);
 		}
+	}
+	else {
+		oldEnergy = oldEnergy - localEnergyBefore + localEnergyAfter;
 	}
 }
 
-void GeneticAlgorithm::mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher)
+void GeneticAlgorithm::mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy)
 {
 	if (k.depth == 0) return;
 	if (qt.getGene(k.k) == -1) return;
@@ -186,49 +212,64 @@ void GeneticAlgorithm::mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoM
 	int parentDepth = k.depth - 1;
 	int pX = k.x / 2;
 	int pY = k.y / 2;
+	int parentK = qt.getIndex(parentDepth, pX, pY);
+	NodeLocation parentLoc = { parentK, parentDepth, pX, pY };
 
 	std::vector<int> siblingIndices;
+	std::set<int> candidateLabels;
 
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 2; j++) {
 			int sK = qt.getIndex(k.depth, pX * 2 + i, pY * 2 + j);
+			int disp = qt.getGene(sK);
 
-			if (qt.getGene(sK) == -1) return;
+			if (disp == -1) return;
 
 			siblingIndices.push_back(sK);
+			candidateLabels.insert(disp);
 		}
 	}
 
-	float oldEnergy = matcher.calculateFitness(qt);
-	int parentK = qt.getIndex(parentDepth, pX, pY);
+	float localEnergyBefore = matcher.calculateFitness(qt, parentLoc);
 
 	std::vector<int> oldValues;
 	for (int sK : siblingIndices) {
 		oldValues.push_back(qt.getGene(sK));
 	}
 
-	qt.setGene(parentK, qt.getGene(k.k));
+	int bestLabel = -1;
+	float bestEnergy = localEnergyBefore;
 
-	for (int sK : siblingIndices) {
-		qt.setGene(sK, -1);
-	}
+	for (int label : candidateLabels) {
+		qt.setGene(parentK, label);
+		for (int sK : siblingIndices) qt.setGene(sK, -1);
 
-	if (matcher.calculateFitness(qt) >= oldEnergy) {
+		float currentEnergy = matcher.calculateFitness(qt, parentLoc);
+
+		if (currentEnergy < bestEnergy) {
+			bestEnergy = currentEnergy;
+			bestLabel = label;
+		}
+
 		qt.setGene(parentK, -1);
 		for (size_t i = 0; i < 4; i++) {
 			qt.setGene(siblingIndices[i], oldValues[i]);
 		}
 	}
+
+	if (bestLabel != -1) {
+		qt.setGene(parentK, bestLabel);
+		for (int sK : siblingIndices) qt.setGene(sK, -1);
+		oldEnergy = oldEnergy - localEnergyBefore + bestEnergy;
+	}
 }
 
 void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
-
 	for (int i = 0; i < popSize; i++) {
-		if (population[i].isDirty()) {
-			matcher.calculateFitness(population[i]);
-			population[i].cleanDirt();
-		}
+		matcher.calculateFitness(population[i]);
+		population[i].cleanDirt();
 	}
+
 	for (int gen = 0; gen < Config::GENERATIONS; gen++) {
 		float minEnergy = FLT_MAX;
 		float maxEnergy = -FLT_MAX;
@@ -236,7 +277,7 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 		int bestIdx = 0;
 
 		for (int i = 0; i < popSize; i++) {
-			float f = population[i].getFitness();
+			float f = (float)population[i].getFitness();
 			totalEnergy += f;
 			if (f < minEnergy) {
 				minEnergy = f;
@@ -248,68 +289,53 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 		}
 
 		float avgEnergy = totalEnergy / popSize;
-		std::cout << "Generation " << gen << " | Best: " << minEnergy << " | Avg: " << avgEnergy << std::endl << std::flush;
+		LinearQuadtree elite = population[bestIdx];
 
-		if ((maxEnergy - minEnergy) < Config::CONVERGENCE_THRESHOLD * avgEnergy) {
+		if ((maxEnergy - minEnergy) < (0.0001f * avgEnergy)) {
 			break;
 		}
 
-		LinearQuadtree elite = population[bestIdx];
 		std::vector<LinearQuadtree> nextGen;
-
-		std::vector<int> sortedIndices(popSize);
-		for (int i = 0; i < popSize; i++) sortedIndices[i] = i;
-
-		std::sort(sortedIndices.begin(), sortedIndices.end(), [&](int a, int b) {
-			return population[a].getFitness() < population[b].getFitness();
-			});
-
-		int totalRankWeight = (popSize * (popSize + 1)) / 2;
-		std::vector<int> cumulativeRankProb(popSize);
-		int currentSum = 0;
-
-		for (int r = 0; r < popSize; r++) {
-			int weight = popSize - r;
-			currentSum += weight;
-			cumulativeRankProb[r] = currentSum;
-		}
-
-		auto selectParentRank = [&]() {
-			int rnd = rand() % totalRankWeight;
-			for (int r = 0; r < popSize; r++) {
-				if (rnd < cumulativeRankProb[r]) return sortedIndices[r];
-			}
-			return sortedIndices[popSize - 1];
-			};
+		auto t_start = std::chrono::high_resolution_clock::now();
 
 		while (nextGen.size() < (size_t)popSize) {
-			int p1 = selectParentRank();
-			int p2 = selectParentRank();
+			int p1 = rand() % popSize;
+			int p2 = rand() % popSize;
 
-			LinearQuadtree child = graftCrossover(population[p1], population[p2]);
-			mutate(child, matcher);
+			LinearQuadtree child1 = graftCrossover(population[p1], population[p2]);
+			mutate(child1, matcher);
+			matcher.calculateFitness(child1);
+			nextGen.push_back(child1);
 
-			matcher.calculateFitness(child);
-			nextGen.push_back(child);
+			if (nextGen.size() < (size_t)popSize) {
+				LinearQuadtree child2 = graftCrossover(population[p2], population[p1]);
+				mutate(child2, matcher);
+				matcher.calculateFitness(child2);
+				nextGen.push_back(child2);
+			}
 		}
 
-		float newMinEnergy = FLT_MAX;
+		float maxEnergyNext = -FLT_MAX;
 		int worstNextIdx = 0;
-		float newMaxEnergy = -FLT_MAX;
-
 		for (int i = 0; i < (int)nextGen.size(); i++) {
-			float f = nextGen[i].getFitness();
-			if (f < newMinEnergy) newMinEnergy = f;
-			if (f > newMaxEnergy) {
-				newMaxEnergy = f;
+			if (nextGen[i].getFitness() > maxEnergyNext) {
+				maxEnergyNext = (float)nextGen[i].getFitness();
 				worstNextIdx = i;
 			}
 		}
 
-		if (minEnergy < newMinEnergy) {
+		if (elite.getFitness() < nextGen[worstNextIdx].getFitness()) {
 			nextGen[worstNextIdx] = elite;
 		}
 
 		population = nextGen;
+
+		auto t_end = std::chrono::high_resolution_clock::now();
+		double duration = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+
+		std::cout << "Generation " << gen
+			<< " | Best: " << minEnergy
+			<< " | Avg: " << avgEnergy
+			<< " | Time(ms): " << duration << std::endl << std::flush;
 	}
 }

@@ -1,0 +1,12 @@
+{
+  "name": "stereo-ga",
+  "version-string": "1.0.0",
+  "builtin-baseline": "25b458671af03578e6a34edd8f0d1ac85e084df4",
+  "dependencies": [
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [ "png", "jpeg", "tiff", "highgui" ]
+    }
+  ]
+}
