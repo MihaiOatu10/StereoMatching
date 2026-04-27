@@ -1,6 +1,6 @@
 #include "Common.h"
 
 namespace Config {
-    int WIDTH = 384;
-    int HEIGHT = 256;
+    int WIDTH = 0;
+    int HEIGHT = 0;
 }

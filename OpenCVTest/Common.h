@@ -4,15 +4,15 @@
         extern int WIDTH;
         extern int HEIGHT;
 
-        const int MAX_DISPARITY = 50;
-		const int MIN_DISPARITY = 0;
-        const int MAX_DEPTH = 7;
-        const int POP_SIZE = 40;
-	    const int GENERATIONS = 800;
-        const float CONVERGENCE_THRESHOLD = 0.0001f;
-        const int WINDOW_RADIUS = 1;
-        const float SMOOTHNESS_LAMBDA = 1.0f;  
-        const float INITIAL_SPLIT_PROB = 0.5f;
+        constexpr int MAX_DISPARITY = 54;
+		constexpr int MIN_DISPARITY = 5;
+        constexpr int MAX_DEPTH = 7;
+        constexpr int POP_SIZE = 40;
+	    constexpr int GENERATIONS = 800;
+        constexpr float CONVERGENCE_THRESHOLD = 0.0001f;
+        constexpr int WINDOW_RADIUS = 1;
+        constexpr float SMOOTHNESS_LAMBDA = 1.0f;  
+        constexpr float INITIAL_SPLIT_PROB = 0.5f;
     }
 
 struct NodeLocation {

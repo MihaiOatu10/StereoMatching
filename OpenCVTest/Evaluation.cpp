@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include "Evaluation.h"
+#include "Common.h"
 
 namespace Evaluation {
     double evaluateDisparityMap_G(const cv::Mat& disparityMap, const std::vector<cv::Mat>& costVolume) {
@@ -70,6 +71,11 @@ namespace Evaluation {
 
         CV_Assert(gtGray.size() == dispGray.size());
 
+        double gtMax;
+        cv::minMaxLoc(gtGray, nullptr, &gtMax);
+        float scale = (float)gtMax / (float)Config::MAX_DISPARITY;
+        std::cout << "Auto detected scale: " << scale << std::endl;
+
         int correct = 0;
         int correctWithin1 = 0;
         int total = 0;
@@ -79,11 +85,11 @@ namespace Evaluation {
                 int gtRaw = gtGray.at<uchar>(y, x);
                 if (gtRaw == 0) continue;
 
-                float gtDisp = gtRaw / 4.0f;
+                float gtDisp = gtRaw / scale;
                 int yourDisp = dispGray.at<uchar>(y, x);
 
                 total++;
-                float diff = std::abs(gtDisp - yourDisp);
+                float diff = std::abs(gtDisp - (float)yourDisp);
                 if (diff < 0.5f) correct++;
                 if (diff <= 1.0f) correctWithin1++;
             }

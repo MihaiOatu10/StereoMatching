@@ -25,9 +25,9 @@ public:
 
 	void populateSpace(const cv::Mat& ImgL, const cv::Mat& ImgR);
 
-	float calculateFitness(LinearQuadtree& qt);
+	void populateSpace(const std::vector<cv::Mat>& images, int centerIdx);
 
-	long long scanBoundary(LinearQuadtree& qt, int start, int end, int fixed, bool horizontal, bool isStart);
+	float calculateFitness(LinearQuadtree& qt);
 
 	float calculateFitness(LinearQuadtree& qt, NodeLocation k);
 
