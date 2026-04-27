@@ -1,9 +1,11 @@
 #pragma once
 
     namespace Config {
-        const int WIDTH = 427;
-        const int HEIGHT = 370;
-        const int MAX_DISPARITY = 32;
+        extern int WIDTH;
+        extern int HEIGHT;
+
+        const int MAX_DISPARITY = 50;
+		const int MIN_DISPARITY = 0;
         const int MAX_DEPTH = 7;
         const int POP_SIZE = 40;
 	    const int GENERATIONS = 800;

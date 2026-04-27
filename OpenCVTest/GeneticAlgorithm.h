@@ -17,6 +17,8 @@ private:
 
 	void copySubTree(const LinearQuadtree& source, LinearQuadtree& dest, int depth, int x, int y);
 
+	void clearSubTree(LinearQuadtree& dest, int depth, int x, int y);
+
 public:
 	GeneticAlgorithm(int populationSize, int mutationRate, int maxDisparity);
 	void initialize(StereoMatcher& matcher, int baseSize);

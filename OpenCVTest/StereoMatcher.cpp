@@ -6,50 +6,51 @@ StereoMatcher::StereoMatcher(int maxDisparity) : d_max(maxDisparity)
         edgeLengths.push_back((float)Config::HEIGHT / (1 << d));
 	}
 	for (int d = 0; d < 20; d++) {
-		penaltyTableVert[d] = (float)Config::SMOOTHNESS_LAMBDA * (Config::HEIGHT / (float)(1 << d));
-		penaltyTableHoriz[d] = (float)Config::SMOOTHNESS_LAMBDA * (Config::WIDTH / (float)(1 << d));
+		penaltyTableVert[d] = (Config::HEIGHT / (float)(1 << d));
+		penaltyTableHoriz[d] = (Config::WIDTH / (float)(1 << d));
 	}
 }
 
 void StereoMatcher::populateSpace(const cv::Mat& ImgL, const cv::Mat& ImgR)
 {
-    costVolume.clear();
-    costVolume.resize(d_max);
-    integralCosts.clear();
-    integralCosts.resize(d_max);
+    int minDisp = Config::MIN_DISPARITY;
+    int maxDisp = Config::MAX_DISPARITY;
+    int numDisp = maxDisp - minDisp;
 
+    costVolume.clear();
+    costVolume.resize(numDisp);
+    integralCosts.clear();
+    integralCosts.resize(numDisp);
     int w = Config::WINDOW_RADIUS;
 
-    for (int d = 0; d < d_max; d++) {
-		cv::Mat cost = cv::Mat::zeros(ImgR.size(), CV_32F); 
+    for (int d = minDisp; d < maxDisp; d++) {
+        int idx = d - minDisp;
+        cv::Mat cost = cv::Mat::zeros(ImgR.size(), CV_32F);
 
-        for(int y = w; y < ImgR.rows - w; y++) {
-            for(int x = w; x < ImgR.cols - w; x++) {
-                if (x + d + w < ImgL.cols) {
+        for (int y = w; y < ImgL.rows - w; y++) {
+            for (int x = w + d; x < ImgL.cols - w; x++) {
+                if (x - d - w >= 0) {
                     float windowSum = 0.0f;
-                    
+
                     for (int i = -w; i <= w; i++) {
                         const uchar* pL = ImgL.ptr<uchar>(y + i);
                         const uchar* pR = ImgR.ptr<uchar>(y + i);
-                        
+
                         for (int j = -w; j <= w; j++) {
-                            windowSum += std::abs((float)pL[x + j + d] - (float)pR[x + j]);
+                            windowSum += std::abs((float)pL[x + j] - (float)pR[x + j - d]);
                         }
                     }
-					cost.at<float>(y, x) = windowSum / 9.0f;
+                    cost.at<float>(y, x) = windowSum;
                 }
             }
-		}
+        }
 
-        costVolume[d] = cost;
-
+        costVolume[idx] = cost;
         cv::Mat integralFloat;
         cv::integral(cost, integralFloat, CV_32F);
-
         cv::Mat integral;
         integralFloat.convertTo(integral, CV_32S);
-
-        integralCosts[d] = integral;
+        integralCosts[idx] = integral;
     }
 }
 

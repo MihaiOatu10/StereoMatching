@@ -17,6 +17,19 @@ void GeneticAlgorithm::copySubTree(const LinearQuadtree& source, LinearQuadtree&
 	}
 }
 
+void GeneticAlgorithm::clearSubTree(LinearQuadtree& dest, int depth, int x, int y)
+{
+	int k = dest.getIndex(depth, x, y);
+	int gene = dest.getGene(k);
+	if (gene == -1 && depth < dest.getMaxDepth()) {
+		clearSubTree(dest, depth + 1, x * 2, y * 2);
+		clearSubTree(dest, depth + 1, x * 2 + 1, y * 2);
+		clearSubTree(dest, depth + 1, x * 2, y * 2 + 1);
+		clearSubTree(dest, depth + 1, x * 2 + 1, y * 2 + 1);
+	}
+	dest.setGene(k, -1); 
+}
+
 GeneticAlgorithm::GeneticAlgorithm(int populationSize, int mutationRate, int maxDisparity)
 	: popSize(populationSize), mutRate(mutationRate), d_max(maxDisparity) {
 }
@@ -45,6 +58,15 @@ void GeneticAlgorithm::findSeedNodes(const LinearQuadtree& p1, const LinearQuadt
 		return;
 	}
 
+	if (isLeaf1 && !isLeaf2) {
+		seeds.push_back({ d, x, y });
+		return;
+	}
+	if (!isLeaf1 && isLeaf2) {
+		seeds.push_back({ d, x, y });
+		return;
+	}
+
 	if (!isLeaf1 && !isLeaf2 && d < p1.getMaxDepth()) {
 		findSeedNodes(p1, p2, d + 1, x * 2, y * 2, seeds);
 		findSeedNodes(p1, p2, d + 1, x * 2 + 1, y * 2, seeds);
@@ -58,7 +80,17 @@ LinearQuadtree GeneticAlgorithm::graftCrossover(const LinearQuadtree& p1, const 
 	std::vector<NodeInfo> seeds;
 	findSeedNodes(p1, p2, 0, 0, 0, seeds);
 
-	if (seeds.empty()) return p1;
+	if (seeds.empty()) {
+		static int emptyCross = 0;
+		static int totalCross = 0;
+		totalCross++;
+		emptyCross++;
+		if (totalCross % 1000 == 0)
+			std::cout << "Empty crossover: " << emptyCross << "/" << totalCross << std::endl;
+		return p1;
+	}
+	static int totalCross = 0;
+	totalCross++;
 
 	int randomIndex = rand() % seeds.size();
 	NodeInfo seed = seeds[randomIndex];
@@ -68,9 +100,8 @@ LinearQuadtree GeneticAlgorithm::graftCrossover(const LinearQuadtree& p1, const 
 	int coverY = seed.y / 2;
 
 	LinearQuadtree child = p1;
+	clearSubTree(child, coverDepth, coverX, coverY);
 	copySubTree(p2, child, coverDepth, coverX, coverY);
-
-	child.simplify(0, 0, 0);
 
 	child.makeDirty();
 
@@ -114,7 +145,6 @@ void GeneticAlgorithm::mutate(LinearQuadtree& qt, StereoMatcher& matcher)
 			mutateMerging(qt, k, matcher, currentEnergy);
 		}
 	}
-	qt.simplify(0, 0, 0);
 }
 
 void GeneticAlgorithm::mutateAlteration(LinearQuadtree& qt, NodeLocation k, StereoMatcher& matcher, float& oldEnergy)
@@ -177,7 +207,6 @@ void GeneticAlgorithm::mutateSplitting(LinearQuadtree& qt, NodeLocation k, Stere
 
 	int originalDisp = qt.getGene(k.k);
 	if (originalDisp == -1) return;
-
 	float localEnergyBefore = matcher.calculateFitness(qt, k);
 
 	qt.setGene(k.k, -1);
@@ -275,7 +304,6 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 		float maxEnergy = -FLT_MAX;
 		float totalEnergy = 0;
 		int bestIdx = 0;
-
 		for (int i = 0; i < popSize; i++) {
 			float f = (float)population[i].getFitness();
 			totalEnergy += f;
@@ -300,7 +328,10 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 
 		while (nextGen.size() < (size_t)popSize) {
 			int p1 = rand() % popSize;
-			int p2 = rand() % popSize;
+			int p2;
+			do {
+				p2 = rand() % popSize;
+			} while (p2 == p1);
 
 			LinearQuadtree child1 = graftCrossover(population[p1], population[p2]);
 			mutate(child1, matcher);
@@ -332,7 +363,12 @@ void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 
 		auto t_end = std::chrono::high_resolution_clock::now();
 		double duration = std::chrono::duration<double, std::milli>(t_end - t_start).count();
-
+		int identical = 0;
+		for (int i = 1; i < popSize; i++) {
+			if (population[i].getD() == population[bestIdx].getD()) {
+				identical++;
+			}
+		}
 		std::cout << "Generation " << gen
 			<< " | Best: " << minEnergy
 			<< " | Avg: " << avgEnergy

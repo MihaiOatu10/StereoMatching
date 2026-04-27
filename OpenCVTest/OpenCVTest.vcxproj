@@ -140,6 +140,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Common.cpp" />
     <ClCompile Include="Evaluation.cpp" />
     <ClCompile Include="GeneticAlgorithm.cpp" />
     <ClCompile Include="LinearQuadtree.cpp" />
@@ -148,6 +149,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Evaluation.h" />
     <ClInclude Include="GeneticAlgorithm.h" />
     <ClInclude Include="LinearQuadtree.h" />
     <ClInclude Include="StereoMatcher.h" />

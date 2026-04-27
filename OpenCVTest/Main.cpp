@@ -10,7 +10,7 @@
 #include "Evaluation.h"
 
 int main() {
-    srand((unsigned int)time(NULL));
+    srand(time(nullptr));
 
     cv::Mat imgL = cv::imread("view1.png", cv::IMREAD_GRAYSCALE);
     cv::Mat imgR = cv::imread("view5.png", cv::IMREAD_GRAYSCALE);
@@ -19,9 +19,27 @@ int main() {
         return -1;
     }
 
+    int imgOriginalW = imgL.cols;
+    int imgOriginalH = imgL.rows;
+
+    int validW = ((imgL.cols + 127) / 128) * 128;
+    int validH = ((imgL.rows + 127) / 128) * 128;
+
+    int totalPadW = validW - imgOriginalW;
+    int totalPadH = validH - imgOriginalH;
+
+    int padLeft = totalPadW / 2;
+    int padRight = totalPadW - padLeft;
+    int padTop = totalPadH / 2;
+    int padBottom = totalPadH - padTop;
+
+    cv::copyMakeBorder(imgL, imgL, padTop, padBottom, padLeft, padRight, cv::BORDER_REFLECT);
+    cv::copyMakeBorder(imgR, imgR, padTop, padBottom, padLeft, padRight, cv::BORDER_REFLECT);
+
+    Config::WIDTH = validW;
+    Config::HEIGHT = validH;
+
     cv::Size quadSize(Config::WIDTH, Config::HEIGHT);
-    cv::resize(imgL, imgL, quadSize);
-    cv::resize(imgR, imgR, quadSize);
 
     StereoMatcher matcher(Config::MAX_DISPARITY);
     matcher.populateSpace(imgL, imgR);
@@ -35,6 +53,21 @@ int main() {
 
     cv::Mat grayResult = cv::Mat::zeros(quadSize, CV_8UC1);
     best.drawDisparity(grayResult, 0, 0, 0);
+
+    grayResult = grayResult(cv::Rect(padLeft, padTop, imgOriginalW, imgOriginalH)).clone();
+
+    imgL = imgL(cv::Rect(padLeft, padTop, imgOriginalW, imgOriginalH)).clone();
+
+    cv::Mat gt = cv::imread("disp1.png", cv::IMREAD_GRAYSCALE);
+    gt = gt(cv::Rect(0, 0, imgOriginalW, imgOriginalH)).clone();
+
+    auto results = Evaluation::evaluateWithGroundTruth(grayResult, gt);
+
+    int zeroCount = cv::countNonZero(grayResult == 0);
+    std::cout << "Zero pixels: " << zeroCount << "/" << (quadSize.width * quadSize.height) << std::endl;
+    std::cout << "Config: " << Config::WIDTH << "x" << Config::HEIGHT << std::endl;
+    std::cout << "Image size: " << imgL.cols << "x" << imgL.rows << std::endl;
+    std::cout << "Canvas size: " << grayResult.cols << "x" << grayResult.rows << std::endl;
 
     double gScore = Evaluation::evaluateDisparityMap_G(grayResult, matcher.getCostVolume());
     std::cout << "\nFinal G(I) Quality Measure: " << gScore << std::endl;

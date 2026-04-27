@@ -54,4 +54,49 @@ namespace Evaluation {
 
         return G_I;
     }
+    EvaluationResult evaluateWithGroundTruth(const cv::Mat& disparityMap, const cv::Mat& groundTruth) {
+        EvaluationResult result;
+        cv::Mat gtGray;
+        if (groundTruth.channels() == 3)
+            cv::cvtColor(groundTruth, gtGray, cv::COLOR_BGR2GRAY);
+        else
+            gtGray = groundTruth.clone();
+
+        cv::Mat dispGray;
+        if (disparityMap.channels() == 3)
+            cv::cvtColor(disparityMap, dispGray, cv::COLOR_BGR2GRAY);
+        else
+            dispGray = disparityMap.clone();
+
+        CV_Assert(gtGray.size() == dispGray.size());
+
+        int correct = 0;
+        int correctWithin1 = 0;
+        int total = 0;
+
+        for (int y = 0; y < gtGray.rows; y++) {
+            for (int x = 0; x < gtGray.cols; x++) {
+                int gtRaw = gtGray.at<uchar>(y, x);
+                if (gtRaw == 0) continue;
+
+                float gtDisp = gtRaw / 4.0f;
+                int yourDisp = dispGray.at<uchar>(y, x);
+
+                total++;
+                float diff = std::abs(gtDisp - yourDisp);
+                if (diff < 0.5f) correct++;
+                if (diff <= 1.0f) correctWithin1++;
+            }
+        }
+
+        result.correctPercentage = (float)correct / total * 100.0f;
+        result.correctWithin1Percentage = (float)correctWithin1 / total * 100.0f;
+        result.totalPixels = total;
+
+        std::cout << "Total pixels evaluated: " << total << std::endl;
+        std::cout << "Correct disparities: " << result.correctPercentage << "%" << std::endl;
+        std::cout << "Correct within +-1: " << result.correctWithin1Percentage << "%" << std::endl;
+
+        return result;
+    }
 }

@@ -4,7 +4,7 @@ inline float StereoMatcher::calculateFitness(LinearQuadtree& qt)
 	long long totalDataError = computeDataTerm(qt, 0, 0, 0, 0, 0, Config::WIDTH, Config::HEIGHT);
 	long long totalBoundaryLength = computeSmoothnessTerm(qt, 0, 0, 0);
 
-	float fitness = (float)totalDataError + (Config::SMOOTHNESS_LAMBDA * (float)totalBoundaryLength / 1000.0f);
+	float fitness = (float)totalDataError + (Config::SMOOTHNESS_LAMBDA * (float)totalBoundaryLength);
 
 	qt.setFitness(fitness);
 	return fitness;
@@ -18,14 +18,30 @@ inline float StereoMatcher::calculateFitness(LinearQuadtree& qt, NodeLocation k)
 	long long dataCost = computeDataTerm(qt, k.x, k.y, k.depth, k.x * nodeW, k.y * nodeH, nodeW, nodeH);
 
 	long long boundaryCost = 0;
-	boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, k.depth, k.x, k.y - 1, 1); 
-	boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, k.depth, k.x, k.y + 1, 1); 
-	boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, k.depth, k.x - 1, k.y, 0); 
-	boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, k.depth, k.x + 1, k.y, 0); 
 
+	int px = k.x * nodeW;
+	int py = k.y * nodeH;
+
+	if (py > 0)
+	{
+		NodeLocation up = qt.findLeafAt(px + nodeW / 2, py - 1);
+		boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, up.depth, up.x, up.y, 1);
+	}
+	if (py + nodeH < Config::HEIGHT) {
+		NodeLocation down = qt.findLeafAt(px + nodeW / 2, py + nodeH);
+		boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, down.depth, down.x, down.y, 1);
+	}
+	if (px > 0) {
+		NodeLocation left = qt.findLeafAt(px - 1, py + nodeH / 2);
+		boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, left.depth, left.x, left.y, 0);
+	}
+	if (px + nodeW < Config::WIDTH) {
+		NodeLocation right = qt.findLeafAt(px + nodeW, py + nodeH / 2);
+		boundaryCost += calculateBorderPenalty(qt, k.depth, k.x, k.y, right.depth, right.x, right.y, 0);
+	}
 	boundaryCost += computeInternalSmoothness(qt, k.depth, k.x, k.y);
 
-	return (float)dataCost + (Config::SMOOTHNESS_LAMBDA * (float)boundaryCost / 1000.0f);
+	return (float)dataCost + (Config::SMOOTHNESS_LAMBDA * (float)boundaryCost);
 }
 
 inline long long StereoMatcher::computeInternalSmoothness(LinearQuadtree& qt, int depth, int x, int y)
@@ -65,10 +81,10 @@ inline long long StereoMatcher::calculateBorderPenalty(LinearQuadtree& qt, int d
 
 	if (v1 != -1 && v2 != -1) {
 		if (v1 != v2) {
-			long long diff = std::abs((long long)v1 - (long long)v2);
-			long long basePenalty = (direction == 0) ? penaltyTableHoriz[std::min(d1, d2)] : penaltyTableVert[std::min(d1, d2)];
-			long long finalPenalty = (basePenalty * diff);
-			return finalPenalty;
+			long long basePenalty = (direction == 0) ?
+				penaltyTableHoriz[std::min(d1, d2)] :
+				penaltyTableVert[std::min(d1, d2)];
+			return basePenalty;
 		}
 		return 0LL;
 	}
@@ -136,23 +152,19 @@ inline long long StereoMatcher::computeDataTerm(LinearQuadtree& qt, int x, int y
 	}
 	else
 	{
-		int disp = std::max(0, std::min(d, d_max - 1));
-		const cv::Mat& sat = integralCosts[disp];
-
+		int disp = std::max(Config::MIN_DISPARITY, std::min(d, Config::MAX_DISPARITY - 1));
+		int idx = disp - Config::MIN_DISPARITY;
+		const cv::Mat& sat = integralCosts[idx];
 		const int* ptr = sat.ptr<int>();
 		int step = sat.step / sizeof(int);
-
-
 		int x1 = px;
 		int y1 = py;
 		int x2 = px + width;
 		int y2 = py + height;
-
 		long long sum = (long long)ptr[y2 * step + x2]
 			- (long long)ptr[y1 * step + x2]
 			- (long long)ptr[y2 * step + x1]
 			+ (long long)ptr[y1 * step + x1];
-
 		return sum;
 	}
 }
@@ -166,17 +178,16 @@ inline int StereoMatcher::getBestLocalDisparity(int depth, int x, int y)
 	int x1 = x0 + nodeW;
 	int y1 = y0 + nodeH;
 
-	int bestD = 0;
+	int bestD = Config::MIN_DISPARITY;
 	long minCost = LONG_MAX;
 
-	for (int d = 0; d < d_max; d++) {
-		const cv::Mat& sumMat = integralCosts[d];
-
+	for (int d = Config::MIN_DISPARITY; d < Config::MAX_DISPARITY; d++) {
+		int idx = d - Config::MIN_DISPARITY;
+		const cv::Mat& sumMat = integralCosts[idx];
 		long currentCost = sumMat.at<int>(y1, x1)
 			- sumMat.at<int>(y1, x0)
 			- sumMat.at<int>(y0, x1)
 			+ sumMat.at<int>(y0, x0);
-
 		if (currentCost < minCost) {
 			minCost = currentCost;
 			bestD = d;

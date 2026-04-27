@@ -44,11 +44,11 @@ void LinearQuadtree::buildRandom(int depth, int x, int y, StereoMatcher& matcher
 	else
 	{
 		cv::Rect region = getRect(depth, x, y);
-		int bestDisparity = 0;
+		int bestDisparity = Config::MIN_DISPARITY;
 		float minCost = FLT_MAX;
-
-		for (int d = 0; d < Config::MAX_DISPARITY; d++) {
-			cv::Scalar sumCost = cv::sum(matcher.getCostVolume()[d](region));
+		for (int d = Config::MIN_DISPARITY; d < Config::MAX_DISPARITY; d++) {
+			int idx = d - Config::MIN_DISPARITY;
+			cv::Scalar sumCost = cv::sum(matcher.getCostVolume()[idx](region));
 			if (sumCost[0] < minCost) {
 				minCost = sumCost[0];
 				bestDisparity = d;
@@ -56,7 +56,6 @@ void LinearQuadtree::buildRandom(int depth, int x, int y, StereoMatcher& matcher
 		}
 		D[k] = bestDisparity;
 	}
-
 	if (depth == 0) {
 		simplify(0, 0, 0);
 	}
