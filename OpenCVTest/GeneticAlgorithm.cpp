@@ -103,8 +103,6 @@ LinearQuadtree GeneticAlgorithm::graftCrossover(const LinearQuadtree& p1, const 
 	clearSubTree(child, coverDepth, coverX, coverY);
 	copySubTree(p2, child, coverDepth, coverX, coverY);
 
-	child.makeDirty();
-
 	return child;
 }
 
@@ -296,7 +294,6 @@ void GeneticAlgorithm::mutateMerging(LinearQuadtree& qt, NodeLocation k, StereoM
 void GeneticAlgorithm::evolve(StereoMatcher& matcher) {
 	for (int i = 0; i < popSize; i++) {
 		matcher.calculateFitness(population[i]);
-		population[i].cleanDirt();
 	}
 
 	for (int gen = 0; gen < Config::GENERATIONS; gen++) {

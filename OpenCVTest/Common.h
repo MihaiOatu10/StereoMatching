@@ -4,8 +4,8 @@
         extern int WIDTH;
         extern int HEIGHT;
 
-        constexpr int MAX_DISPARITY = 54;
-		constexpr int MIN_DISPARITY = 5;
+        constexpr int MAX_DISPARITY = 46;
+		constexpr int MIN_DISPARITY = 0;
         constexpr int MAX_DEPTH = 7;
         constexpr int POP_SIZE = 40;
 	    constexpr int GENERATIONS = 800;

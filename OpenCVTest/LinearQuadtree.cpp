@@ -22,7 +22,6 @@ void LinearQuadtree::setGene(int k, int value)
 {
 	if (D[k] != value) {
 		D[k] = value;
-		m_isDirty = true;
 	}
 }
 

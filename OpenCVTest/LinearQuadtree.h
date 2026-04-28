@@ -13,7 +13,6 @@ private:
 	int base_size;
 	std::vector<int> D;
 	double fitness;
-	bool m_isDirty = true;
 
 public:
 	LinearQuadtree(int maxDepth, int baseSize)
@@ -35,7 +34,4 @@ public:
 	void drawOutline(cv::Mat& canvas, int depth, int x, int y) const;
 	void drawDisparity(cv::Mat& canvas, int depth, int x, int y) const;
 	NodeLocation findLeafAt(int px, int py) const;
-	bool isDirty() const { return m_isDirty; }
-	void makeDirty() { m_isDirty = true; }
-	void cleanDirt() { m_isDirty = false; }
 };
