@@ -20,7 +20,7 @@ An evolutionary approach to the stereo matching problem using Quadtree structure
 ## 🚧 Current Status
 - [x] Binocular Stereo Support (Aloe dataset)
 - [x] Vcpkg integration (Manifest Mode)
-- [ ] Multi-view occlusion detection
+- [x] Multi-view occlusion detection (Tsukuba dataset)
 
 ## 📚 References
 * Gong, M., & Yang, Y. H. (2002). "Genetic-Based Stereo Algorithm and Disparity Map Evaluation". *International Journal of Computer Vision*.
